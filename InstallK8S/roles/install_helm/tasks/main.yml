@@ -1,0 +1,16 @@
+- name: Download and install Helm
+  ansible.builtin.get_url:
+    url: "https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3"
+    dest: /tmp/get_helm.sh
+    mode: "0755"
+
+- name: Run Helm installation script
+  ansible.builtin.command: /tmp/get_helm.sh
+  register: helm_install_output
+  args:
+    creates: /usr/local/bin/helm
+
+- name: Check Helm installation status
+  ansible.builtin.debug:
+    msg: "{{ helm_install_output.stdout_lines }}"
+  when: helm_install_output is defined

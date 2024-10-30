@@ -7,3 +7,4 @@
         user_shell: "{{ ansible_facts.shell | default(ansible_env.SHELL) }}"
   roles:
     - role: install_k3s
+    - role: install_helm
