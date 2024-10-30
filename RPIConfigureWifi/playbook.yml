@@ -3,7 +3,7 @@
   hosts: rpi
   gather_facts: false
   tasks:
-    - name: Update and Upgrade APT packages
+    - name: Update and upgrade packages
       ansible.builtin.apt:
         update_cache: yes
         upgrade: dist
