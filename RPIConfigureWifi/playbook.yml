@@ -1,0 +1,88 @@
+---
+- name: Configure Network on Raspberry Pi
+  hosts: rpi
+  gather_facts: false
+  tasks:
+    - name: Update and Upgrade APT packages
+      ansible.builtin.apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Install required packages
+      ansible.builtin.apt:
+        name:
+          - network-manager
+          - rfkill
+        state: present
+        update_cache: true
+
+    - name: Enable NetworkManager to start on boot
+      ansible.builtin.service:
+        name: NetworkManager
+        enabled: true
+
+    - name: Unblock Wi-Fi using rfkill
+      ansible.builtin.command:
+        cmd: rfkill unblock wifi
+      become: true
+      changed_when: false
+
+    - name: Adjust NetworkManager configuration
+      ansible.builtin.copy:
+        content: |
+          [main]
+          plugins=ifupdown,keyfile
+
+          [ifupdown]
+          managed=true
+
+          [device]
+          wifi.backend=wpa_supplicant
+          wifi.scan-rand-mac-address=no
+
+          [keyfile]
+          unmanaged-devices=*,except:type:ethernet,except:type:wifi
+        dest: /etc/NetworkManager/NetworkManager.conf
+      become: true
+
+    - name: Ensure Ethernet (eth0) autoconnects when available
+      community.general.nmcli:
+        conn_name: eth0
+        state: present
+        autoconnect: true
+        route_metric4: 100
+      become: true
+
+    - name: Add Wi-Fi connection
+      community.general.nmcli:
+        type: wifi
+        ifname: wlan0
+        conn_name: HomeWifi
+        ssid: "{{ lookup('env', 'FirstSSID') }}"
+        wifi_sec:
+          key-mgmt: wpa-psk
+          psk: "{{ lookup('env', 'FirstPSK') }}"
+        autoconnect: true
+        state: present
+      when: lookup('env', 'FirstSSID') is defined
+
+    - name: Add Wi-Fi connection
+      community.general.nmcli:
+        type: wifi
+        conn_name: SecondWifi
+        ifname: wlan0
+        ssid: "{{ lookup('env', 'SecondSSID') }}"
+        wifi_sec:
+          key-mgmt: wpa-psk
+          psk: "{{ lookup('env', 'SecondPSK') }}"
+        autoconnect: true
+        state: present
+      when: lookup('env', 'SecondSSID') is defined
+
+  handlers:
+    - name: Restart NetworkManager
+      ansible.builtin.service:
+        name: NetworkManager
+        state: restarted
+      become: true
+      changed_when: false
