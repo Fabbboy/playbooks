@@ -1,50 +1,9 @@
 - name: Setup k3s and helm on Linux
-  hosts: localhost
+  hosts: all
   gather_facts: true
-  tasks:
+  pre_tasks:
     - name: Gather user shell
       ansible.builtin.set_fact:
         user_shell: "{{ ansible_facts.shell | default(ansible_env.SHELL) }}"
-
-    - name: Download and install k3s
-      ansible.builtin.get_url:
-        url: "https://get.k3s.io"
-        dest: /tmp/get_k3s.sh
-        mode: "0755"
-
-    - name: Run k3s installation script
-      ansible.builtin.command: /tmp/get_k3s.sh --disable traefik
-      register: k3s_install_output
-      args:
-        creates: /usr/local/bin/k3s
-
-    - name: Create kubeconfig directory
-      ansible.builtin.file:
-        path: "{{ ansible_env.HOME }}/.kube"
-        owner: "{{ ansible_env.USER }}"
-        group: "{{ ansible_env.USER }}"
-        mode: "0755"
-        state: directory
-
-    - name: Copy kubeconfig file
-      ansible.builtin.copy:
-        src: /etc/rancher/k3s/k3s.yaml
-        dest: "{{ ansible_env.HOME }}/.kube/config"
-        owner: "{{ ansible_env.USER }}"
-        group: "{{ ansible_env.USER }}"
-        mode: "0600"
-      become: true
-
-    - name: Set KUBECONFIG environment variable in bashrc
-      ansible.builtin.lineinfile:
-        path: "{{ ansible_env.HOME }}/.bashrc"
-        line: "export KUBECONFIG={{ ansible_env.HOME }}/.kube/config"
-        mode: "0644"
-      when: user_shell == "/bin/bash"
-
-    - name: Set KUBECONFIG environment variable in zshrc
-      ansible.builtin.lineinfile:
-        path: "{{ ansible_env.HOME }}/.zshrc"
-        line: "export KUBECONFIG={{ ansible_env.HOME }}/.kube/config"
-        mode: "0644"
-      when: user_shell == "/bin/zsh"
+  roles:
+    - role: install_k3s
